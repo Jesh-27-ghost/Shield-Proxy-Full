@@ -34,16 +34,11 @@ class LLMGateway:
         if self.use_mock:
             return self._mock_complete(prompt, start)
 
-        # Try real LLM APIs
+        # ── Try Ollama as the primary generator ──
         try:
-            return await self._openai_complete(prompt, start)
+            return await self._ollama_complete(prompt, start)
         except Exception as e:
-            logger.warning("OpenAI failed: %s, trying Gemini", e)
-
-        try:
-            return await self._gemini_complete(prompt, start)
-        except Exception as e:
-            logger.warning("Gemini failed: %s, using mock", e)
+            logger.warning("Ollama Generation failed: %s, falling back to mock", e)
             return self._mock_complete(prompt, start)
 
     def _mock_complete(self, prompt: str, start: float) -> dict:
@@ -63,6 +58,27 @@ class LLMGateway:
             "response": response,
             "model": "mock-gpt-4o",
             "tokens_used": tokens,
+            "latency_ms": round(elapsed, 1),
+        }
+
+    async def _ollama_complete(self, prompt: str, start: float) -> dict:
+        from config import LOCAL_LLM_API_BASE, LOCAL_LLM_MODEL
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(base_url=LOCAL_LLM_API_BASE, api_key="local-ignore")
+        resp = await client.chat.completions.create(
+            model=LOCAL_LLM_MODEL,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=300,
+            temperature=0.7,
+        )
+        elapsed = (time.time() - start) * 1000
+        return {
+            "response": resp.choices[0].message.content,
+            "model": LOCAL_LLM_MODEL,
+            "tokens_used": resp.usage.total_tokens if resp.usage else 0,
             "latency_ms": round(elapsed, 1),
         }
 

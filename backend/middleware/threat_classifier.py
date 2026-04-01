@@ -103,52 +103,37 @@ class ThreatClassifier:
         self.use_mock = use_mock
         self.client = _ollama_client if not use_mock else None
         self.model = LOCAL_LLM_MODEL
+        self._cache = {}
 
         if self.client:
-            logger.info("🧠 ThreatClassifier using Ollama Llama 3 (%s)", self.model)
+            logger.info("🧠 ThreatClassifier using Ollama Llama 3 (%s) [with Cache]", self.model)
         else:
             logger.info("🔤 ThreatClassifier using regex fallback (mock=%s)", use_mock)
 
     def classify(self, text: str) -> dict:
         start = time.time()
 
-        # ── Stage 1: Always run regex first (fast, <1ms) ──
-        regex_result = self._regex_classify(text)
-
-        # ── Stage 2: If Ollama is available, use it for confirmation / better accuracy ──
+        # ── If Ollama is available, direct all requests to it ──
         if self.client is not None:
             try:
                 llm_result = self._ollama_classify(text, start)
-                # Merge: if regex found a threat, trust it; if LLM found a threat regex missed, trust LLM
-                if regex_result["is_threat"] and llm_result["is_threat"]:
-                    # Both agree on threat — use higher confidence
-                    final = llm_result
-                    final["confidence"] = max(regex_result["confidence"], llm_result["confidence"])
-                    final["matched_patterns"] = regex_result["matched_patterns"] + [f"LLM confirmed: {llm_result['threat_type']}"]
-                elif regex_result["is_threat"]:
-                    # Regex caught it, LLM missed — trust regex
-                    final = regex_result
-                    final["model"] = f"regex+{self.model}"
-                elif llm_result["is_threat"]:
-                    # LLM caught it, regex missed — trust LLM
-                    final = llm_result
-                    final["matched_patterns"] = [f"LLM detected: {llm_result['threat_type']}"]
-                else:
-                    # Both say safe
-                    final = llm_result
-                    final["confidence"] = max(regex_result["confidence"], llm_result["confidence"])
-
-                final["inference_time_ms"] = round((time.time() - start) * 1000, 1)
-                return final
+                llm_result["inference_time_ms"] = round((time.time() - start) * 1000, 1)
+                return llm_result
             except Exception as e:
                 logger.error("Ollama inference failed: %s — using regex fallback", e)
 
         # ── Fallback: regex-only result ──
+        regex_result = self._regex_classify(text)
         regex_result["inference_time_ms"] = round((time.time() - start) * 1000, 1)
         return regex_result
 
     def _ollama_classify(self, text: str, start: float) -> dict:
         """Classify using Ollama Llama 3 via OpenAI-compatible API."""
+        if text in self._cache:
+            cached_result = self._cache[text].copy()
+            cached_result["model"] = f"{self.model} (cached)"
+            return cached_result
+            
         system_msg = (
             "You are a cybersecurity threat classifier for an LLM firewall. "
             "Analyze the user prompt for security threats. "
@@ -168,7 +153,7 @@ class ThreatClassifier:
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": f'Classify this prompt: "{text}"'},
             ],
-            max_tokens=10,
+            max_tokens=15,
             temperature=0.0,
         )
 
@@ -183,7 +168,7 @@ class ThreatClassifier:
                 break
 
         is_threat = detected_type != "SAFE"
-        return {
+        result = {
             "is_threat": is_threat,
             "threat_type": detected_type,
             "confidence": round(random.uniform(0.88, 0.99), 2) if is_threat else round(random.uniform(0.90, 0.98), 2),
@@ -191,6 +176,8 @@ class ThreatClassifier:
             "inference_time_ms": round(elapsed, 1),
             "model": self.model,
         }
+        self._cache[text] = result
+        return result.copy()
 
     def _regex_classify(self, text: str) -> dict:
         """Fast regex-based classification (always runs as baseline)."""
