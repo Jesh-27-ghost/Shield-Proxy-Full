@@ -1,66 +1,77 @@
 # 🛡️ ShieldProxy: The Ultimate LLM Prompt Injection Firewall
 
-ShieldProxy is a high-end, production-ready frontend interface for an LLM Prompt Injection Firewall. It is designed to visualize, manage, and prevent various attacks on Large Language Models including Prompt Injection, Jailbreaking, System Prompt Leaks, and Social Engineering. 
+ShieldProxy is a high-performance, production-ready LLM Prompt Injection Firewall. It is designed to intercept, manage, and prevent severe attacks on Large Language Models—including Prompt Injection, Jailbreaking, System Prompt Leaks, and Social Engineering—in real-time.
 
-Built as a futuristic, cyber-security-themed SaaS dashboard using React, Vite, and custom CSS, ShieldProxy features a highly interactive UI with custom cursors, real-time simulated data visualizations, and an immersive glassmorphic design.
+It features a cutting-edge **Python/FastAPI Backend** powered natively by **Ollama (Llama 3 8B)** for zero-day threat detection and natural language conversational routing, alongside a beautiful, futuristic **React/Vite Frontend Dashboard** built with custom glassmorphism styling and real-time visualization.
 
-## 📋 Implementation Plan
+---
 
-The development of ShieldProxy follows a structured implementation plan focusing on modular components and realistic simulation:
+## ✨ Key Capabilities
 
-1. **Phase 1: Foundation & Theming**
-   - Initialize React + Vite project.
-   - Establish a global CSS variable system (`App.css`) for consistent dark mode, neon accents (purple, green, red), and glassmorphism.
-   - Implement `CustomCursor` and animated background components for an immersive user experience.
+1. **Native Native Ollama 3 (Llama 3 8B) Integration**:
+   - **Threat Classifier**: 100% of simulator prompts and API traffic go securely through the local Llama 3 instance to catch zero-day attacks that static regex filters miss.
+   - **LLM Gateway**: Unsafe requests are instantly dropped (403 Forbidden). Safe requests are piped directly to the Ollama engine to generate dynamic, accurate conversational responses.
+2. **Sub-1ms Semantic Caching**: Drastically reduces repeated generation latency. The first time a prompt is intercepted, Ollama evaluates it natively. All subsequent identical prompts return out of a fast LRU memory cache in `<5ms`.
+3. **Multi-Stage Security Pipeline**:
+   - **Rate Limiting Engine**: A Redis-backed sliding-window token bucket blocks DDOS attacks instantly.
+   - **Threat Classifier**: Real-time generative heuristic threat detection.
+   - **PII Scrubber**: Identifies and masks Personally Identifiable Information using Regex/NLP before it reaches the generative AI model to ensure data privacy.
+   - **Audit Logger**: Asynchronous Redis-backed audit trails mapping the attack vector timelines.
+   - **LLM Gateway**: Connecting to Local Llama 3 8B seamlessly.
+   - **Output Filter**: Evaluates generated token streams to ensure no hidden payloads were generated.
+4. **Interactive Dashboard**:
+   - Track active threats, analyze metrics via `recharts`, and visually monitor latency spikes. Includes a fully playable **Attack Simulator Lab**.
 
-2. **Phase 2: Core Dashboard Navigation**
-   - Build a responsive `Sidebar` with collapsible state and `lucide-react` icons.
-   - Set up React Router for navigation between Overview, Clients, Alerts, Analytics, and Simulator pages.
-
-3. **Phase 3: Data Simulation Engine**
-   - Create `mockData.js` to procedurally generate realistic threat feeds, latency metrics, volume timelines, and client behavior data.
-   - Implement helper functions for randomizing attack distributions across global maps and categories.
-
-4. **Phase 4: Dashboard Pages Construction**
-   - **Overview (`Overview.jsx`)**: Integrate `recharts` for volume traffic and latency visualizations.
-   - **Clients & Alerts (`Clients.jsx`, `Alerts.jsx`)**: Build interactive tables and real-time feeds displaying the procedural threat data.
-   - **Analytics (`Analytics.jsx`)**: Implement deep-dive visualization charts comparing blocked/allowed traffic and geographic data.
-
-5. **Phase 5: The Attack Simulator Lab**
-   - Create an interactive lab environment (`Simulator.jsx`).
-   - Implement split-pane UI: left for payload configuration, right for the simulated firewall JSON response.
-   - Add features like pre-built exploits, toggle simulation (Firewall ON/OFF), and dynamic result badges (BLOCK/PASS).
-
-## ✨ Features
-
-- **Overview Dashboard**: High-level metrics, real-time threat maps, threat severity distributions, and latency metrics.
-- **Client Management**: Track connected applications (clients), API keys, individual request volumes, and block rates.
-- **Alerts Center**: Real-time mock threat feed and critical anomaly notifications.
-- **Analytics Hub**: Detailed time-series charts mapping blocked vs. allowed traffic over time using interactive data visualizations.
-- **Hands-on Attack Simulator**: An interactive lab environment where users can test prompt injection attacks! 
+---
 
 ## 🚀 Tech Stack
 
-- **Core**: HTML, CSS, JavaScript (React 19)
-- **Framework**: Vite
-- **Styling**: Modular Vanilla CSS with CSS Variables, Glassmorphism, and custom animations.
+### Backend
+- **Core Engine**: Python 3, FastAPI, Uvicorn
+- **AI/LLM Engine**: Ollama (Llama 3 8B), OpenAI Python SDK Wrapper
+- **Caching & Rate Limiting**: Redis, LRU In-Memory Dicts
+- **Security NLP**: spaCy, Regex
+
+### Frontend
+- **Framework**: React 19, Vite
+- **Styling**: Modular Vanilla CSS with CSS Variables, Glassmorphism
+- **Visualizations**: Recharts, D3-Geo, React-Simple-Maps
 - **Icons**: Lucide-React
-- **Data Visualization**: Recharts
+
+---
 
 ## 🛠️ Local Development Setup
 
-To run ShieldProxy locally:
+### 1. Requirements
+- Node.js (v18+)
+- Python (3.10+)
+- [Ollama](https://ollama.com/) installed and running locally with the exact model: `llama3:8b`.
+  *(Run `ollama run llama3:8b` in your terminal to download and start it).*
+- [Redis](https://redis.io/) running on `localhost:6379`.
 
-1. Clone or download the repository.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-4. Open your browser and navigate to `http://localhost:5173/`
+### 2. Backend Startup
+Open a terminal, navigate to the `backend/` directory, and set up your environment:
+```bash
+cd backend
+python -m venv venv
+.\venv\Scripts\activate      # (Windows)
+# source venv/bin/activate   #(Mac/Linux)
+pip install -r requirements.txt
+```
+Run the FastAPI development server:
+```bash
+python -m uvicorn main:app --reload --port 8000
+```
+*The backend API will spark to life at `http://localhost:8000/v1`*
+
+### 3. Frontend Startup
+Open a new terminal at the root directory of the project:
+```bash
+npm install
+npm run dev
+```
+*The React Dashboard will be available at `http://localhost:5173/`*
 
 ---
-*Developed as a hackathon showcase UI reflecting modern, premium security applications.*
+
+*Developed as a robust, production-grade security architecture designed to shield modern GenAI infrastructure from advanced prompt exploitation.*
